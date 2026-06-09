@@ -98,7 +98,8 @@ if text_input:
 # --- 4. DATA PROCESSING AND ENGINE PIPELINE ---
 if audio_input_used or user_query:
     with st.spinner("Processing request..."):
-        model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+        # TARGET THE UPGRADED PRODUCTION STABLE VARIANT NAME
+        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
         
         if audio_input_used:
             st.session_state.messages.append({"role": "user", "content": "🗣️ Sent a voice command"})
@@ -106,7 +107,6 @@ if audio_input_used or user_query:
                 st.write("🗣️ Sent a voice command")
                 
             try:
-                # READ RAW AUDIO STREAM INDIRECTLY TO AVOID GOOGLE FILE SYSTEM LOOKUP BUG
                 with open(temp_voice_path, "rb") as audio_file:
                     audio_data = audio_file.read()
                     
@@ -154,14 +154,14 @@ if audio_input_used or user_query:
             
             # Smart data grouping matcher
             if len(cat_cols) >= 1 and len(num_cols) >= 1:
-                top_cats = df[cat_cols[0]].value_counts().nlargest(10).index
-                filtered_df = df[df[cat_cols[0]].isin(top_cats)]
-                sns.barplot(data=filtered_df, x=cat_cols[0], y=num_cols[0], errorbar=None, ax=ax, palette="Blues_d")
-                ax.set_title(f"{num_cols[0]} Breakdown by Top {cat_cols[0]}")
+                top_cats = df[cat_cols].value_counts().nlargest(10).index
+                filtered_df = df[df[cat_cols].isin(top_cats)]
+                sns.barplot(data=filtered_df, x=cat_cols, y=num_cols, errorbar=None, ax=ax, palette="Blues_d")
+                ax.set_title(f"{num_cols} Breakdown by Top {cat_cols}")
                 plt.xticks(rotation=45)
             elif len(num_cols) >= 1:
-                sns.lineplot(data=df, y=num_cols[0], x=df.index, ax=ax, color="#009688")
-                ax.set_title(f"{num_cols[0]} Trend Track")
+                sns.lineplot(data=df, y=num_cols, x=df.index, ax=ax, color="#009688")
+                ax.set_title(f"{num_cols} Trend Track")
             
             plt.tight_layout()
             msg_data["plot_type"] = "pyplot"
