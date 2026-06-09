@@ -94,27 +94,40 @@ if text_input:
 # --- 4. DATA PROCESSING AND ENGINE PIPELINE ---
 if audio_input_used or user_query:
     with st.spinner("Processing request..."):
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        base_prompt = f"{data_context}\n\nAnalyze the user request based on the data context provided above."
+        # Explicit model targeting to fix the NotFound error
+        model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
         
         if audio_input_used:
             st.session_state.messages.append({"role": "user", "content": "🗣️ Sent a voice command"})
             with st.chat_message("user"):
                 st.write("🗣️ Sent a voice command")
                 
-            # Upload the audio file straight into the Gemini 1.5 Multimodal pipeline
-            audio_file_upload = genai.upload_file(path=temp_voice_path)
-            response = model.generate_content([base_prompt, audio_file_upload])
-            bot_response = response.text
+            try:
+                # Upload the audio file straight into the Gemini 1.5 Multimodal pipeline
+                audio_file_upload = genai.upload_file(path=temp_voice_path)
+                
+                # Combine instructions and audio payload clearly
+                response = model.generate_content([
+                    data_context, 
+                    "Analyze this dataset context and answer the user spoken question contained within this audio file.", 
+                    audio_file_upload
+                ])
+                bot_response = response.text
+                
+                # Clean up cloud asset registry trace
+                genai.delete_file(audio_file_upload.name)
+            except Exception as e:
+                bot_response = f"Sorry, I ran into an audio parsing error: {str(e)}. Please try typing your request instead!"
             
-            # Clean up local cloud memory file
-            os.remove(temp_voice_path)
+            # Clean up local file system path 
+            if os.path.exists(temp_voice_path):
+                os.remove(temp_voice_path)
         else:
             st.session_state.messages.append({"role": "user", "content": user_query})
             with st.chat_message("user"):
                 st.write(user_query)
                 
-            full_prompt = f"{base_prompt}\nUser Question: {user_query}"
+            full_prompt = f"{data_context}\n\nUser Question: {user_query}"
             response = model.generate_content(full_prompt)
             bot_response = response.text
 
@@ -137,12 +150,12 @@ if audio_input_used or user_query:
             if len(cat_cols) >= 1 and len(num_cols) >= 1:
                 top_cats = df[cat_cols].value_counts().nlargest(10).index
                 filtered_df = df[df[cat_cols].isin(top_cats)]
-                sns.barplot(data=filtered_df, x=cat_cols, y=num_cols, errorbar=None, ax=ax, palette="Blues_d")
-                ax.set_title(f"{num_cols} Breakdown by Top {cat_cols}")
+                sns.barplot(data=filtered_df, x=cat_cols, y=num_cols[0], errorbar=None, ax=ax, palette="Blues_d")
+                ax.set_title(f"{num_cols[0]} Breakdown by Top {cat_cols[0]}")
                 plt.xticks(rotation=45)
             elif len(num_cols) >= 1:
-                sns.lineplot(data=df, y=num_cols, x=df.index, ax=ax, color="#009688")
-                ax.set_title(f"{num_cols} Trend Track")
+                sns.lineplot(data=df, y=num_cols[0], x=df.index, ax=ax, color="#009688")
+                ax.set_title(f"{num_cols[0]} Trend Track")
             
             plt.tight_layout()
             msg_data["plot_type"] = "pyplot"
