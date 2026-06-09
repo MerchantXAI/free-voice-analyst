@@ -35,13 +35,11 @@ uploaded_file = st.sidebar.file_uploader("Upload your Dataset:", type=["csv", "x
 data_context = ""
 if uploaded_file is not None:
     try:
-        # Read the uploaded file into a Pandas DataFrame
+        # Read the uploaded file into a Pandas DataFrame with standard web encoding and fallback
         if uploaded_file.name.endswith(".csv"):
             try:
-                # Try reading with standard web encoding first
                 st.session_state["current_df"] = pd.read_csv(uploaded_file)
             except UnicodeDecodeError:
-                # Fallback to handle old Excel/Windows platform encodings smoothly
                 uploaded_file.seek(0)
                 st.session_state["current_df"] = pd.read_csv(uploaded_file, encoding="latin1")
         else:
@@ -100,7 +98,6 @@ if text_input:
 # --- 4. DATA PROCESSING AND ENGINE PIPELINE ---
 if audio_input_used or user_query:
     with st.spinner("Processing request..."):
-        # Explicit model targeting to fix the NotFound error
         model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
         
         if audio_input_used:
@@ -109,23 +106,26 @@ if audio_input_used or user_query:
                 st.write("🗣️ Sent a voice command")
                 
             try:
-                # Upload the audio file straight into the Gemini 1.5 Multimodal pipeline
-                audio_file_upload = genai.upload_file(path=temp_voice_path)
+                # READ RAW AUDIO STREAM INDIRECTLY TO AVOID GOOGLE FILE SYSTEM LOOKUP BUG
+                with open(temp_voice_path, "rb") as audio_file:
+                    audio_data = audio_file.read()
+                    
+                audio_payload = {
+                    "mime_type": "audio/wav",
+                    "data": audio_data
+                }
                 
-                # Combine instructions and audio payload clearly
+                # Forward data arrays together using purely backend variables
                 response = model.generate_content([
                     data_context, 
-                    "Analyze this dataset context and answer the user spoken question contained within this audio file.", 
-                    audio_file_upload
+                    "Transcribe the query hidden within this audio file, analyze the spreadsheet info matching it, and provide a short output answer summary.", 
+                    audio_payload
                 ])
                 bot_response = response.text
-                
-                # Clean up cloud asset registry trace
-                genai.delete_file(audio_file_upload.name)
             except Exception as e:
                 bot_response = f"Sorry, I ran into an audio parsing error: {str(e)}. Please try typing your request instead!"
             
-            # Clean up local file system path 
+            # Clean up temporary storage tracks safely
             if os.path.exists(temp_voice_path):
                 os.remove(temp_voice_path)
         else:
