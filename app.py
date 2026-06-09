@@ -37,7 +37,13 @@ if uploaded_file is not None:
     try:
         # Read the uploaded file into a Pandas DataFrame
         if uploaded_file.name.endswith(".csv"):
-            st.session_state["current_df"] = pd.read_csv(uploaded_file)
+            try:
+                # Try reading with standard web encoding first
+                st.session_state["current_df"] = pd.read_csv(uploaded_file)
+            except UnicodeDecodeError:
+                # Fallback to handle old Excel/Windows platform encodings smoothly
+                uploaded_file.seek(0)
+                st.session_state["current_df"] = pd.read_csv(uploaded_file, encoding="latin1")
         else:
             st.session_state["current_df"] = pd.read_excel(uploaded_file)
             
@@ -148,9 +154,9 @@ if audio_input_used or user_query:
             
             # Smart data grouping matcher
             if len(cat_cols) >= 1 and len(num_cols) >= 1:
-                top_cats = df[cat_cols].value_counts().nlargest(10).index
-                filtered_df = df[df[cat_cols].isin(top_cats)]
-                sns.barplot(data=filtered_df, x=cat_cols, y=num_cols[0], errorbar=None, ax=ax, palette="Blues_d")
+                top_cats = df[cat_cols[0]].value_counts().nlargest(10).index
+                filtered_df = df[df[cat_cols[0]].isin(top_cats)]
+                sns.barplot(data=filtered_df, x=cat_cols[0], y=num_cols[0], errorbar=None, ax=ax, palette="Blues_d")
                 ax.set_title(f"{num_cols[0]} Breakdown by Top {cat_cols[0]}")
                 plt.xticks(rotation=45)
             elif len(num_cols) >= 1:
