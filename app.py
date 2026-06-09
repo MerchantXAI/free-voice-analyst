@@ -173,8 +173,8 @@ if audio_input_used or user_query:
                 else:
                     num_cols = df.select_dtypes(include=['number']).columns.tolist()
                     if num_cols:
-                        sns.histplot(data=df, x=num_cols[0], kde=True, ax=ax, color="#4A90E2")
-                        ax.set_title(f"Operational Metric Density Spread Profile: {num_cols[0]}", fontsize=12, fontweight='bold')
+                        sns.histplot(data=df, x=num_cols, kde=True, ax=ax, color="#4A90E2")
+                        ax.set_title(f"Operational Metric Density Spread Profile: {num_cols}", fontsize=12, fontweight='bold')
                 
                 plt.tight_layout()
                 st.pyplot(fig)
@@ -188,18 +188,14 @@ if audio_input_used or user_query:
         if "|" in clean_text or len(clean_text) > 800:
             clean_text = "I have successfully processed your dataset and generated an in-depth strategic analysis. I have broken down the high-level insights, provided tailored recommendations for your business and technical stakeholders, and plotted your performance metrics directly on the screen for you to review."
         else:
-            pronunciation_fixes = {
-                "ORDERNUMBER": "order number", "SALES": "sales", "QUANTITYORDERED": "quantity ordered",
-                "PRICEEACH": "price each", "PRODUCTLINE": "product line", "CUSTOMERNAME": "customer name",
-                "ORDERDATE": "order date", "DEALSIZE": "deal size", "COUNTRY": "country", "CITY": "city",
-"STATE": "state", "ADDRESSLINE2": "address line 2", "POSTALCODE": "postal code",
-"TERRITORY": "territory", "MSRP": "manufacturer suggested retail price", "EMEA": "e m e a"
-}
-for upper_word, spoken_word in pronunciation_fixes.items():
-clean_text = clean_text.replace(upper_word, spoken_word)
+            # ONE-LINE BRIDGES TO RADICALLY FORCE CORRECT SPEECH SENSE
+            clean_text = clean_text.replace("ORDERNUMBER", "order number").replace("SALES", "sales").replace("QUANTITYORDERED", "quantity ordered")
+clean_text = clean_text.replace("PRICEEACH", "price each").replace("PRODUCTLINE", "product line").replace("CUSTOMERNAME", "customer name")
+clean_text = clean_text.replace("ORDERDATE", "order date").replace("DEALSIZE", "deal size").replace("COUNTRY", "country")
+clean_text = clean_text.replace("CITY", "city").replace("STATE", "state").replace("ADDRESSLINE2", "address line 2")
+clean_text = clean_text.replace("POSTALCODE", "postal code").replace("TERRITORY", "territory").replace("MSRP", "retail price").replace("EMEA", "E M E A")
 clean_text = clean_text.lower()
 tts = gTTS(text=clean_text, lang='en', slow=False)
 temp_audio = "cloud_response.mp3"
 tts.save(temp_audio)
 st.audio(temp_audio, format="audio/mp3", autoplay=True)
-
