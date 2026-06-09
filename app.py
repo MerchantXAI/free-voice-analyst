@@ -63,7 +63,7 @@ if uploaded_file is not None:
         FIRST 5 ROWS OF DATA FOR CONTEXT:
         {df.head(5).to_string()}
         
-        YOUR OBJECTIVE:
+        YOUR OBJECTIVES:
         When answering questions or providing an analysis, you must present an elaborate, structured response with these exact sections:
         1. **Executive Summary & High-Level Insights**: A concise overview of global operational health.
         2. **Business Stakeholder Recommendations**: Actionable strategies to drive revenue, capture market share, and optimize pricing/discounts (e.g., maximizing MSRP vs PRICEEACH captures).
@@ -105,9 +105,9 @@ if audio_input_used or user_query:
         model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
         
         if audio_input_used:
-            st.session_state.messages.append({"role": "user", "content": "🗣️ Sent an executive voice command"})
+            st.session_state.messages.append({"role": "user", "content": "🗣 ..."})
             with st.chat_message("user"):
-                st.write("🗣️ Sent an executive voice command")
+                st.write("🗣 Sent an executive voice command")
                 
             try:
                 with open(temp_voice_path, "rb") as audio_file:
@@ -195,7 +195,7 @@ if audio_input_used or user_query:
             msg_data["plot_type"] = "pyplot"
             msg_data["plot_fig"] = fig
         except Exception as chart_err:
-bot_response += f"\n\n*(Visual Engine Alert: Could not auto-render plot layout: {chart_err})*"
+            bot_response += f"\n\n*(Visual Engine Alert: Could not auto-render plot layout: {chart_err})*"
 msg_data["content"] = bot_response
 # Show Complete Elements Simultaneously
 st.session_state.messages.append(msg_data)
@@ -224,3 +224,5 @@ tts = gTTS(text=clean_text, lang='en', slow=False)
 temp_audio = "cloud_response.mp3"
 tts.save(temp_audio)
 st.audio(temp_audio, format="audio/mp3", autoplay=True)
+
+
