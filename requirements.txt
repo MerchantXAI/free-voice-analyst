@@ -1,0 +1,7 @@
+streamlit
+google-generativeai
+gTTS
+pandas
+openpyxl
+matplotlib
+seaborn
