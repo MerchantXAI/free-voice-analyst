@@ -188,13 +188,24 @@ if audio_input_used or user_query:
         if "|" in clean_text or len(clean_text) > 800:
             clean_text = "I have successfully processed your dataset and generated an in-depth strategic analysis. I have broken down the high-level insights, provided tailored recommendations for your business and technical stakeholders, and plotted your performance metrics directly on the screen for you to review."
         else:
-            # ONE-LINE BRIDGES TO RADICALLY FORCE CORRECT SPEECH SENSE
-            clean_text = clean_text.replace("ORDERNUMBER", "order number").replace("SALES", "sales").replace("QUANTITYORDERED", "quantity ordered")
-clean_text = clean_text.replace("PRICEEACH", "price each").replace("PRODUCTLINE", "product line").replace("CUSTOMERNAME", "customer name")
-clean_text = clean_text.replace("ORDERDATE", "order date").replace("DEALSIZE", "deal size").replace("COUNTRY", "country")
-clean_text = clean_text.replace("CITY", "city").replace("STATE", "state").replace("ADDRESSLINE2", "address line 2")
-clean_text = clean_text.replace("POSTALCODE", "postal code").replace("TERRITORY", "territory").replace("MSRP", "retail price").replace("EMEA", "E M E A")
-clean_text = clean_text.lower()
+            # FIXED: SHORTER LINES TO PREVENT GITHUB BRAID BLOCKS FROM CUTTING OFF CODE DATA
+            clean_text = clean_text.replace("ORDERNUMBER", "order number")
+            clean_text = clean_text.replace("SALES", "sales")
+            clean_text = clean_text.replace("QUANTITYORDERED", "quantity ordered")
+            clean_text = clean_text.replace("PRICEEACH", "price each")
+            clean_text = clean_text.replace("PRODUCTLINE", "product line")
+            clean_text = clean_text.replace("CUSTOMERNAME", "customer name")
+            clean_text = clean_text.replace("ORDERDATE", "order date")
+            clean_text = clean_text.replace("DEALSIZE", "deal size")
+            clean_text = clean_text.replace("COUNTRY", "country")
+            clean_text = clean_text.replace("CITY", "city")
+            clean_text = clean_text.replace("STATE", "state")
+            clean_text = clean_text.replace("ADDRESSLINE2", "address line 2")
+            clean_text = clean_text.replace("POSTALCODE", "postal code")
+            clean_text = clean_text.replace("TERRITORY", "territory")
+            clean_text = clean_text.replace("MSRP", "retail price")
+            clean_text = clean_text.replace("EMEA", "E M E A")
+            clean_text = clean_text.lower()
 tts = gTTS(text=clean_text, lang='en', slow=False)
 temp_audio = "cloud_response.mp3"
 tts.save(temp_audio)
