@@ -182,13 +182,13 @@ if audio_input_used or user_query:
                 st.warning(f"*(Visual Engine Alert: Could not auto-render plot layout: {chart_err})*")
 
     # --- 6. VOICE SYNTHESIS OUTPUT WITH PROMPT BRIDGES ---
+    # FIXED: This entire block is now cleanly nested inside the processing execution loop
     with st.spinner("Speaking executive brief..."):
         clean_text = bot_response.replace("**", "").replace("#", "").replace("`", "")
         
         if "|" in clean_text or len(clean_text) > 800:
             clean_text = "I have successfully processed your dataset and generated an in-depth strategic analysis. I have broken down the high-level insights, provided tailored recommendations for your business and technical stakeholders, and plotted your performance metrics directly on the screen for you to review."
         else:
-            # FIXED: SHORTER LINES TO PREVENT GITHUB BRAID BLOCKS FROM CUTTING OFF CODE DATA
             clean_text = clean_text.replace("ORDERNUMBER", "order number")
             clean_text = clean_text.replace("SALES", "sales")
             clean_text = clean_text.replace("QUANTITYORDERED", "quantity ordered")
@@ -206,7 +206,8 @@ if audio_input_used or user_query:
             clean_text = clean_text.replace("MSRP", "retail price")
             clean_text = clean_text.replace("EMEA", "E M E A")
             clean_text = clean_text.lower()
-tts = gTTS(text=clean_text, lang='en', slow=False)
-temp_audio = "cloud_response.mp3"
-tts.save(temp_audio)
-st.audio(temp_audio, format="audio/mp3", autoplay=True)
+            
+        tts = gTTS(text=clean_text, lang='en', slow=False)
+        temp_audio = "cloud_response.mp3"
+        tts.save(temp_audio)
+        st.audio(temp_audio, format="audio/mp3", autoplay=True)
