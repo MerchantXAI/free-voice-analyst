@@ -20,11 +20,11 @@ genai.configure(api_key=GEMINI_API_KEY)
 # --- 2. STREAMLIT INTERFACE AND STYLING ---
 st.set_page_config(page_title="Executive Data Analyst AI", layout="wide")
 st.title("📊 Strategic Cloud Data Analyst Voicebot")
-st.caption("100% Free Cloud Engine — Generating Executive Insights, Graphics & Voice Over")
+st.caption("100% Free Cloud Engine — Controlled completely via Mobile and PC Browsers")
 
-# Initialize Chat & Chart Memory State Trackers
+# Initialize Chat Memory for Text displays
 if "messages" not in st.session_state:
-    st.session_state["messages"] = [{"role": "model", "content": "Hello Leader! Upload your .csv or .xlsx corporate log files into the sidebar menu, then drop a voice command or text query to trigger a comprehensive strategic analysis."}]
+    st.session_state["messages"] = [{"role": "assistant", "content": "Hello Leader! Upload your .csv or .xlsx corporate log files into the sidebar menu, then drop a voice command or text query to trigger a comprehensive strategic analysis."}]
 if "current_df" not in st.session_state:
     st.session_state["current_df"] = None
 
@@ -35,7 +35,6 @@ uploaded_file = st.sidebar.file_uploader("Upload your Dataset:", type=["csv", "x
 data_context = ""
 if uploaded_file is not None:
     try:
-        # Read the uploaded file into a Pandas DataFrame with standard web encoding and fallback
         if uploaded_file.name.endswith(".csv"):
             try:
                 st.session_state["current_df"] = pd.read_csv(uploaded_file)
@@ -49,7 +48,6 @@ if uploaded_file is not None:
         st.sidebar.success("Dataset Synced to Cloud Core!")
         st.sidebar.dataframe(df.head(5)) 
         
-        # Capture columns and data structure to feed Gemini
         buffer = io.StringIO()
         df.info(buf=buffer)
         df_info = buffer.getvalue()
@@ -78,11 +76,8 @@ if uploaded_file is not None:
 
 # Render Old Chat History on screen refresh
 for msg in st.session_state.messages:
-    st_role = "assistant" if msg["role"] == "model" else msg["role"]
-    with st.chat_message(st_role):
+    with st.chat_message(msg["role"]):
         st.write(msg["content"])
-        if "plot_type" in msg:
-            st.pyplot(msg["plot_fig"])
 
 user_query = ""
 audio_input_used = False
@@ -105,10 +100,6 @@ if audio_input_used or user_query:
         model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
         
         if audio_input_used:
-            st.session_state.messages.append({"role": "user", "content": "🗣 ..."})
-            with st.chat_message("user"):
-                st.write("🗣 Sent an executive voice command")
-                
             try:
                 with open(temp_voice_path, "rb") as audio_file:
                     audio_data = audio_file.read()
@@ -124,77 +115,91 @@ if audio_input_used or user_query:
                     audio_payload
                 ])
                 bot_response = response.text
+                user_query = "🗣 Executive Voice Command"
             except Exception as e:
                 bot_response = f"Sorry, I ran into an audio parsing error: {str(e)}. Please try typing your request instead!"
             
             if os.path.exists(temp_voice_path):
                 os.remove(temp_voice_path)
         else:
-            st.session_state.messages.append({"role": "user", "content": user_query})
-            with st.chat_message("user"):
-                st.write(user_query)
-                
             full_prompt = f"{data_context}\n\nUser Question: {user_query}"
             response = model.generate_content(full_prompt)
             bot_response = response.text
 
-    msg_data = {"role": "model", "content": bot_response}
-    df = st.session_state["current_df"]
-    
-    # --- 5. REFINED BULLETPROOF CHARTING PIPELINE ---
-    check_text = user_query.lower() if not audio_input_used else bot_response.lower()
-    is_chart_request = any(word in check_text for word in ["chart", "graph", "plot", "bar", "histogram", "scatter", "visualize", "trend", "analysis"])
-    
-    if is_chart_request and df is not None:
-        try:
-            # Standardize column queries to match uppercase profiles
-            df.columns = [c.upper() for c in df.columns]
-            
-            fig, ax = plt.subplots(figsize=(10, 5))
-            sns.set_theme(style="darkgrid")
-            
-            # Scenario A: Timeline Trend Tracking (SALES over ORDERDATE or tracking indices)
-            if "SALES" in df.columns and any(x in check_text for x in ["trend", "time", "timeline", "date", "growth"]):
-                if "ORDERDATE" in df.columns:
-                    # Convert to standard format strings to smooth chart limits (YYYY-MM)
-                    df['SHORT_DATE'] = df['ORDERDATE'].astype(str).str[:7]
-                    timeline_df = df.groupby('SHORT_DATE')['SALES'].sum().reset_index().sort_values('SHORT_DATE')
-                    sns.lineplot(data=timeline_df, x='SHORT_DATE', y='SALES', marker='o', ax=ax, color="#009688", linewidth=2.5)
-                    ax.set_title("Global Sales Performance Trend Over Time", fontsize=12, fontweight='bold')
-                    plt.xticks(rotation=45)
-                else:
-                    sns.lineplot(data=df.head(100), y='SALES', x=df.head(100).index, ax=ax, color="#009688")
-                    ax.set_title("Sales Performance Volatility Tracking Index", fontsize=12, fontweight='bold')
-            
-            # Scenario B: Categorical Volume Breakdown (Slicing SALES by PRODUCTLINE or COUNTRY)
-            elif "SALES" in df.columns and any(x in df.columns for x in ["PRODUCTLINE", "COUNTRY"]):
-                target_cat = "PRODUCTLINE" if "PRODUCTLINE" in df.columns else "COUNTRY"
-                
-                # Safely pre-aggregate data vectors to prevent dimension vector mismatch errors
-                grouped_df = df.groupby(target_cat)['SALES'].sum().reset_index().sort_values('SALES', ascending=False).head(10)
-                
-                sns.barplot(data=grouped_df, x=target_cat, y='SALES', ax=ax, palette="Blues_r", errorbar=None)
-                ax.set_title(f"Top Revenue Contributors by Category Profiles ({target_cat})", fontsize=12, fontweight='bold')
-                plt.xticks(rotation=35, ha='right')
-                
-            # Scenario C: Operational Size Mix (DEALSIZE counts)
-            elif "DEALSIZE" in df.columns:
-                grouped_deal = df['DEALSIZE'].value_counts().reset_index()
-                grouped_deal.columns = ['DEALSIZE', 'COUNT']
-                sns.barplot(data=grouped_deal, x='DEALSIZE', y='COUNT', ax=ax, palette="YlGnBu_r")
-                ax.set_title("Operational Distribution Index by Transaction Deal Sizes", fontsize=12, fontweight='bold')
-            
-            else:
-                # Catch-all baseline placeholder mapping numerical features safely
-                num_cols = df.select_dtypes(include=['number']).columns.tolist()
-                if num_cols:
-                    sns.histplot(data=df, x=num_cols, kde=True, ax=ax, color="#4A90E2")
-                    ax.set_title(f"Operational Metric Density Spread Profile: {num_cols}", fontsize=12, fontweight='bold')
-            
-            plt.tight_layout()
-            msg_data["plot_type"] = "pyplot"
-            msg_data["plot_fig"] = fig
-        except Exception as chart_err:
-            bot_response += f"\n\n*(Visual Engine Alert: Could not auto-render plot layout: {chart_err})*"
+    # Show User Input
+    st.session_state.messages.append({"role": "user", "content": user_query})
+    with st.chat_message("user"):
+        st.write(user_query)
 
-msg_data["content"] = bot_response# Show Complete Elements Simultaneouslyst.session_state.messages.append(msg_data)with st.chat_message("assistant"):st.write(bot_response)if "plot_type" in msg_data:st.pyplot(msg_data["plot_fig"])# --- 6. VOICE SYNTHESIS OUTPUT WITH PROMPT BRIDGES ---with st.spinner("Speaking executive brief..."):clean_text = bot_response.replace("**", "").replace("#", "").replace("`", "")# If the text has a table format or is exceptionally long, give a summarized vocal briefing insteadif "|" in clean_text or len(clean_text) > 800:clean_text = "I have successfully processed your dataset and generated an in-depth strategic analysis. I have broken down the high-level insights, provided tailored recommendations for your business and technical stakeholders, and plotted your performance metrics directly on the screen for you to review."else:pronunciation_fixes = {"ORDERNUMBER": "order number", "SALES": "sales", "QUANTITYORDERED": "quantity ordered","PRICEEACH": "price each", "PRODUCTLINE": "product line", "CUSTOMERNAME": "customer name","ORDERDATE": "order date", "DEALSIZE": "deal size", "COUNTRY": "country", "CITY": "city","STATE": "state", "ADDRESSLINE2": "address line 2", "POSTALCODE": "postal code","TERRITORY": "territory", "MSRP": "manufacturer suggested retail price", "EMEA": "e m e a"}for upper_word, spoken_word in pronunciation_fixes.items():clean_text = clean_text.replace(upper_word, spoken_word)clean_text = clean_text.lower()tts = gTTS(text=clean_text, lang='en', slow=False)temp_audio = "cloud_response.mp3"tts.save(temp_audio)st.audio(temp_audio, format="audio/mp3", autoplay=True)
+    # Show Bot Response Text
+    st.session_state.messages.append({"role": "assistant", "content": bot_response})
+    with st.chat_message("assistant"):
+        st.write(bot_response)
+        
+        # --- 5. REFINED DYNAMIC CHARTING PANEL ---
+        df = st.session_state["current_df"]
+        check_text = bot_response.lower() + " " + user_query.lower()
+        is_chart_request = any(word in check_text for word in ["chart", "graph", "plot", "bar", "histogram", "scatter", "visualize", "trend", "analysis"])
+        
+        if is_chart_request and df is not None:
+            try:
+                df.columns = [c.upper() for c in df.columns]
+                fig, ax = plt.subplots(figsize=(10, 5))
+                sns.set_theme(style="darkgrid")
+                
+                if "SALES" in df.columns and any(x in check_text for x in ["trend", "time", "timeline", "date", "growth"]):
+                    if "ORDERDATE" in df.columns:
+                        df['SHORT_DATE'] = df['ORDERDATE'].astype(str).str[:7]
+                        timeline_df = df.groupby('SHORT_DATE')['SALES'].sum().reset_index().sort_values('SHORT_DATE')
+                        sns.lineplot(data=timeline_df, x='SHORT_DATE', y='SALES', marker='o', ax=ax, color="#009688", linewidth=2.5)
+                        plt.xticks(rotation=45)
+                        ax.set_title("Global Sales Performance Trend Over Time", fontsize=12, fontweight='bold')
+                    else:
+                        sns.lineplot(data=df.head(100), y='SALES', x=df.head(100).index, ax=ax, color="#009688")
+                        ax.set_title("Sales Performance Volatility Tracking Index", fontsize=12, fontweight='bold')
+                
+                elif "SALES" in df.columns and any(x in df.columns for x in ["PRODUCTLINE", "COUNTRY"]):
+                    target_cat = "PRODUCTLINE" if "PRODUCTLINE" in df.columns else "COUNTRY"
+                    grouped_df = df.groupby(target_cat)['SALES'].sum().reset_index().sort_values('SALES', ascending=False).head(10)
+                    sns.barplot(data=grouped_df, x=target_cat, y='SALES', ax=ax, palette="Blues_r", errorbar=None)
+                    plt.xticks(rotation=35, ha='right')
+                    ax.set_title(f"Top Revenue Contributors by Category Profiles ({target_cat})", fontsize=12, fontweight='bold')
+                    
+                elif "DEALSIZE" in df.columns:
+                    grouped_deal = df['DEALSIZE'].value_counts().reset_index()
+                    grouped_deal.columns = ['DEALSIZE', 'COUNT']
+                    sns.barplot(data=grouped_deal, x='DEALSIZE', y='COUNT', ax=ax, palette="YlGnBu_r")
+                    ax.set_title("Operational Distribution Index by Transaction Deal Sizes", fontsize=12, fontweight='bold')
+                else:
+                    num_cols = df.select_dtypes(include=['number']).columns.tolist()
+                    if num_cols:
+                        sns.histplot(data=df, x=num_cols[0], kde=True, ax=ax, color="#4A90E2")
+                        ax.set_title(f"Operational Metric Density Spread Profile: {num_cols[0]}", fontsize=12, fontweight='bold')
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+            except Exception as chart_err:
+                st.warning(f"*(Visual Engine Alert: Could not auto-render plot layout: {chart_err})*")
+
+    # --- 6. VOICE SYNTHESIS OUTPUT WITH PROMPT BRIDGES ---
+    with st.spinner("Speaking executive brief..."):
+        clean_text = bot_response.replace("**", "").replace("#", "").replace("`", "")
+        
+        if "|" in clean_text or len(clean_text) > 800:
+            clean_text = "I have successfully processed your dataset and generated an in-depth strategic analysis. I have broken down the high-level insights, provided tailored recommendations for your business and technical stakeholders, and plotted your performance metrics directly on the screen for you to review."
+        else:
+            pronunciation_fixes = {
+                "ORDERNUMBER": "order number", "SALES": "sales", "QUANTITYORDERED": "quantity ordered",
+                "PRICEEACH": "price each", "PRODUCTLINE": "product line", "CUSTOMERNAME": "customer name",
+                "ORDERDATE": "order date", "DEALSIZE": "deal size", "COUNTRY": "country", "CITY": "city",
+"STATE": "state", "ADDRESSLINE2": "address line 2", "POSTALCODE": "postal code",
+"TERRITORY": "territory", "MSRP": "manufacturer suggested retail price", "EMEA": "e m e a"
+}
+for upper_word, spoken_word in pronunciation_fixes.items():
+clean_text = clean_text.replace(upper_word, spoken_word)
+clean_text = clean_text.lower()
+tts = gTTS(text=clean_text, lang='en', slow=False)
+temp_audio = "cloud_response.mp3"
+tts.save(temp_audio)
+st.audio(temp_audio, format="audio/mp3", autoplay=True)
+
