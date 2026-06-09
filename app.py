@@ -98,8 +98,7 @@ if text_input:
 # --- 4. DATA PROCESSING AND ENGINE PIPELINE ---
 if audio_input_used or user_query:
     with st.spinner("Processing request..."):
-        # TARGET THE UPGRADED PRODUCTION STABLE VARIANT NAME
-        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+        model = genai.GenerativeModel(model_name="models/gemini-2.5-flash")
         
         if audio_input_used:
             st.session_state.messages.append({"role": "user", "content": "🗣️ Sent a voice command"})
@@ -115,7 +114,6 @@ if audio_input_used or user_query:
                     "data": audio_data
                 }
                 
-                # Forward data arrays together using purely backend variables
                 response = model.generate_content([
                     data_context, 
                     "Transcribe the query hidden within this audio file, analyze the spreadsheet info matching it, and provide a short output answer summary.", 
@@ -125,7 +123,6 @@ if audio_input_used or user_query:
             except Exception as e:
                 bot_response = f"Sorry, I ran into an audio parsing error: {str(e)}. Please try typing your request instead!"
             
-            # Clean up temporary storage tracks safely
             if os.path.exists(temp_voice_path):
                 os.remove(temp_voice_path)
         else:
@@ -177,11 +174,40 @@ if audio_input_used or user_query:
         if "plot_type" in msg_data:
             st.pyplot(msg_data["plot_fig"])
 
-    # --- 6. VOICE SYNTHESIS OUTPUT ---
+    # --- 6. VOICE SYNTHESIS OUTPUT WITH ACRONYM FIXES ---
     with st.spinner("Speaking reply..."):
+        # Strip structural markdown markers
         clean_text = bot_response.replace("**", "").replace("#", "").replace("`", "")
+        
         if "|" in clean_text:
             clean_text = "I have generated and displayed the table breakdown on the screen for you to review."
+        else:
+            # SCRIPT-LEVEL DICTIONARY LOOKUP TO PREVENT ACCENT STUTTERS OR SPELLING GLITCHES
+            pronunciation_fixes = {
+                "ORDERNUMBER": "order number",
+                "SALES": "sales",
+                "QUANTITYORDERED": "quantity ordered",
+                "PRICEEACH": "price each",
+                "MSRP": "m s r p",
+                "PRODUCTLINE": "product line",
+                "CUSTOMERNAME": "customer name",
+                "ORDERDATE": "order date",
+                "DEALSIZE": "deal size",
+                "COUNTRY": "country",
+                "CITY": "city",
+                "STATE": "state",
+                "ADDRESSLINE2": "address line 2",
+                "POSTALCODE": "postal code",
+                "TERRITORY": "territory",
+                "MSRP": "manufacturer retail price"
+            }
+            
+            # Map upper structural tags to lowercase spaced strings before voice synthesis
+            for upper_word, spoken_word in pronunciation_fixes.items():
+                clean_text = clean_text.replace(upper_word, spoken_word)
+                
+            # Global lowercase converter fallback to ensure any remaining uppercase data prints correctly
+            clean_text = clean_text.lower()
             
         tts = gTTS(text=clean_text, lang='en', slow=False)
         temp_audio = "cloud_response.mp3"
