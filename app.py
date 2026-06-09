@@ -188,41 +188,13 @@ if audio_input_used or user_query:
                 # Catch-all baseline placeholder mapping numerical features safely
                 num_cols = df.select_dtypes(include=['number']).columns.tolist()
                 if num_cols:
-                    sns.histplot(data=df, x=num_cols[0], kde=True, ax=ax, color="#4A90E2")
-                    ax.set_title(f"Operational Metric Density Spread Profile: {num_cols[0]}", fontsize=12, fontweight='bold')
+                    sns.histplot(data=df, x=num_cols, kde=True, ax=ax, color="#4A90E2")
+                    ax.set_title(f"Operational Metric Density Spread Profile: {num_cols}", fontsize=12, fontweight='bold')
             
             plt.tight_layout()
             msg_data["plot_type"] = "pyplot"
             msg_data["plot_fig"] = fig
         except Exception as chart_err:
             bot_response += f"\n\n*(Visual Engine Alert: Could not auto-render plot layout: {chart_err})*"
-msg_data["content"] = bot_response
-# Show Complete Elements Simultaneously
-st.session_state.messages.append(msg_data)
-with st.chat_message("assistant"):
-st.write(bot_response)
-if "plot_type" in msg_data:
-st.pyplot(msg_data["plot_fig"])
-# --- 6. VOICE SYNTHESIS OUTPUT WITH PROMPT BRIDGES ---
-with st.spinner("Speaking executive brief..."):
-clean_text = bot_response.replace("**", "").replace("#", "").replace("`", "")
-# If the text has a table format or is exceptionally long, give a summarized vocal briefing instead
-if "|" in clean_text or len(clean_text) > 800:
-clean_text = "I have successfully processed your dataset and generated an in-depth strategic analysis. I have broken down the high-level insights, provided tailored recommendations for your business and technical stakeholders, and plotted your performance metrics directly on the screen for you to review."
-else:
-pronunciation_fixes = {
-"ORDERNUMBER": "order number", "SALES": "sales", "QUANTITYORDERED": "quantity ordered",
-"PRICEEACH": "price each", "PRODUCTLINE": "product line", "CUSTOMERNAME": "customer name",
-"ORDERDATE": "order date", "DEALSIZE": "deal size", "COUNTRY": "country", "CITY": "city",
-"STATE": "state", "ADDRESSLINE2": "address line 2", "POSTALCODE": "postal code",
-"TERRITORY": "territory", "MSRP": "manufacturer suggested retail price", "EMEA": "e m e a"
-}
-for upper_word, spoken_word in pronunciation_fixes.items():
-clean_text = clean_text.replace(upper_word, spoken_word)
-clean_text = clean_text.lower()
-tts = gTTS(text=clean_text, lang='en', slow=False)
-temp_audio = "cloud_response.mp3"
-tts.save(temp_audio)
-st.audio(temp_audio, format="audio/mp3", autoplay=True)
 
-
+msg_data["content"] = bot_response# Show Complete Elements Simultaneouslyst.session_state.messages.append(msg_data)with st.chat_message("assistant"):st.write(bot_response)if "plot_type" in msg_data:st.pyplot(msg_data["plot_fig"])# --- 6. VOICE SYNTHESIS OUTPUT WITH PROMPT BRIDGES ---with st.spinner("Speaking executive brief..."):clean_text = bot_response.replace("**", "").replace("#", "").replace("`", "")# If the text has a table format or is exceptionally long, give a summarized vocal briefing insteadif "|" in clean_text or len(clean_text) > 800:clean_text = "I have successfully processed your dataset and generated an in-depth strategic analysis. I have broken down the high-level insights, provided tailored recommendations for your business and technical stakeholders, and plotted your performance metrics directly on the screen for you to review."else:pronunciation_fixes = {"ORDERNUMBER": "order number", "SALES": "sales", "QUANTITYORDERED": "quantity ordered","PRICEEACH": "price each", "PRODUCTLINE": "product line", "CUSTOMERNAME": "customer name","ORDERDATE": "order date", "DEALSIZE": "deal size", "COUNTRY": "country", "CITY": "city","STATE": "state", "ADDRESSLINE2": "address line 2", "POSTALCODE": "postal code","TERRITORY": "territory", "MSRP": "manufacturer suggested retail price", "EMEA": "e m e a"}for upper_word, spoken_word in pronunciation_fixes.items():clean_text = clean_text.replace(upper_word, spoken_word)clean_text = clean_text.lower()tts = gTTS(text=clean_text, lang='en', slow=False)temp_audio = "cloud_response.mp3"tts.save(temp_audio)st.audio(temp_audio, format="audio/mp3", autoplay=True)
